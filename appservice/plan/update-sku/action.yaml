@@ -1,0 +1,28 @@
+name: "Scale Up App Service Plan"
+description: "Scale Up App Service Plan"
+
+inputs:
+  azure_credentials:
+    description: "Azure AD credentials"
+    required: true
+  app_service_plan:
+    description: "App Service Plan name"
+    required: true
+  resource_group:
+    description: "Resource Group"
+    required: true
+  sku:
+    description: "SKU e.g. P1v2 read. https://docs.microsoft.com/en-us/cli/azure/appservice/plan?view=azure-cli-latest"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: azure/login@v1
+      with:
+        creds: ${{ inputs.azure_credentials }}
+
+    - name: Scaling App Service Plan to ${{ inputs.sku }}
+      run: |
+        az appservice plan update --sku '${{ inputs.sku }}' --name '${{ inputs.app_service_plan }}' --resource-group '${{ inputs.resource_group }}'
+      shell: bash
