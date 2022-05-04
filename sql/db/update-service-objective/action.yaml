@@ -1,0 +1,31 @@
+name: "Scale SQL Database"
+description: "Scale SQL Database"
+
+inputs:
+  azure_credentials:
+    description: "Azure AD credentials"
+    required: true
+  db_name:
+    description: "DB name"
+    required: true
+  db_server:
+    description: "DB Server name"
+    required: true
+  resource_group:
+    description: "Resource Group"
+    required: true
+  service_objective:
+    description: "Service Objective e.g. S0	S1	S2	S3	S4	S6	S7	S9	S12"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: azure/login@v1
+      with:
+        creds: ${{ inputs.azure_credentials }}
+
+    - name: Scaling DB to ${{ inputs.service_objective }}
+      run: |
+        az sql db update --resource-group '${{ inputs.resource_group }}' --server '${{ inputs.db_server }}' --name '${{ inputs.db_name }}' --service-objective '${{ inputs.service_objective }}'
+      shell: bash
