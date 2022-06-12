@@ -1,0 +1,65 @@
+name: "Get Publishing Profiles"
+description: "Get Publishing Profiles and masking as a secret"
+
+inputs:
+  azure_credentials:
+    description: "Azure AD credentials"
+    required: true
+  name:
+    description: "App Service name"
+    required: true
+  slot:
+    description: "App Service Slot"
+    default: "production"
+  resource_group:
+    description: "Resource Group"
+    required: true
+
+outputs:
+  publish_profile:
+    description: 'publish profile'
+    value: '${{ steps.mark_publish_profile.outputs.publish_profile }}'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set secret filename
+      run: |
+        echo "mildronize_action_az_cli_webapp_list_publish=publishprofile-$(date +%s).yaml" >> $GITHUB_ENV
+      shell: bash
+
+    - uses: azure/login@v1
+      with:
+        creds: ${{ inputs.azure_credentials }}
+
+    - name: Get Publishing Profiles with Production Slot
+      if: ${{ inputs.slot == 'production' }}
+      run: |
+        az webapp deployment list-publishing-profiles \
+          --name ${{ inputs.name }} \
+          --resource-group ${{ inputs.resource_group }} \
+          --xml > ${{ env.mildronize_action_az_cli_webapp_list_publish }}
+      shell: bash
+
+    - name: Get Publishing Profiles with Non Production Slot
+      if: ${{ inputs.slot != 'production' }}
+      run: |
+        az webapp deployment list-publishing-profiles \
+          --name ${{ inputs.name }} \
+          --slot ${{ inputs.slot }} \
+          --resource-group ${{ inputs.resource_group }} \
+          --xml > ${{ env.mildronize_action_az_cli_webapp_list_publish }}
+      shell: bash
+
+    - name: Mask Password
+      id: mark_publish_profile
+      run: |
+        secret=`cat ${{ env.mildronize_action_az_cli_webapp_list_publish }}`
+        echo "::add-mask::$secret"
+        echo "::set-output name=publish_profile::$secret"
+      shell: bash
+
+    - name: Clean tmp files
+      run: |
+        rm -f ${{ env.mildronize_action_az_cli_webapp_list_publish }}
+      shell: bash
